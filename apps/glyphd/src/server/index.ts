@@ -14,7 +14,7 @@ import {
   getCookieHeader,
 } from "./auth.ts";
 
-const VERSION = "0.1.3";
+const VERSION = "0.1.4";
 
 // Resolve dist/client path — works both from source and compiled binary
 // Compiled binary: import.meta.dir = "/$bunfs/root/", use process.execPath instead
@@ -76,12 +76,12 @@ async function checkForUpdates(): Promise<void> {
   }
 }
 
-function parseArgs(): Config {
+async function parseArgs(): Promise<Config> {
   const args = process.argv.slice(2);
 
   for (const arg of args) {
     if (arg === "upgrade") {
-      handleUpgrade();
+      await handleUpgrade();
     }
     if (arg === "--help" || arg === "-h") {
       console.log(`
@@ -140,7 +140,7 @@ if (process.platform === "win32") {
   process.exit(1);
 }
 
-const config = parseArgs();
+const config = await parseArgs();
 setConfig(config);
 const authConfig = createAuthConfig(config.password);
 

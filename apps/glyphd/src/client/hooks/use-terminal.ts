@@ -2,6 +2,11 @@ import { useEffect, useRef } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
+import { CanvasAddon } from "@xterm/addon-canvas";
+
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
+  (/iPad|iPhone|iPod/.test(navigator.userAgent)) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const THEME = {
   background:          "#09090b",
@@ -64,17 +69,20 @@ export function useTerminal({ fontSize, onData, onResize }: UseTerminalOptions) 
     term.open(container);
     fitAddon.fit();
 
-    // Try WebGL renderer for GPU-accelerated rendering; fall back to canvas silently
-    // Skip on iOS — WebGL context can silently fail and cause a black screen
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if (!isIOS) {
+    // GPU-accelerated rendering: WebGL on desktop, Canvas on Safari/iOS
+    // Safari has WebGL context loss issues when backgrounding + canvas memory limits
+    if (isSafari) {
+      try { term.loadAddon(new CanvasAddon()); } catch {}
+    } else {
       try {
         const webgl = new WebglAddon();
-        webgl.onContextLoss(() => webgl.dispose());
+        webgl.onContextLoss(() => {
+          webgl.dispose();
+          try { term.loadAddon(new CanvasAddon()); } catch {}
+        });
         term.loadAddon(webgl);
       } catch {
-        // canvas fallback is fine
+        try { term.loadAddon(new CanvasAddon()); } catch {}
       }
     }
 

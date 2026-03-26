@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useWs } from "@/contexts/ws-context";
 import { useTerminal } from "@/hooks/use-terminal";
 
@@ -14,6 +14,10 @@ export function TerminalTab({ tabId, active, fontSize }: TerminalTabProps) {
 
   const sessionIdRef = useRef<string | null>(null);
 
+  // RAF batching: buffer chunks between frames, flush once per render
+  const writeBuffer = useRef<Uint8Array[]>([]);
+  const rafId = useRef<number>(0);
+
   const { containerRef, fit, write, focus, getDimensions } = useTerminal({
     fontSize,
     onData: (data) => {
@@ -23,6 +27,21 @@ export function TerminalTab({ tabId, active, fontSize }: TerminalTabProps) {
       if (sessionIdRef.current) sendResize(sessionIdRef.current, cols, rows);
     },
   });
+
+  const flushBuffer = useCallback(() => {
+    const chunks = writeBuffer.current;
+    if (chunks.length === 0) return;
+    writeBuffer.current = [];
+    rafId.current = 0;
+    for (const chunk of chunks) write(chunk);
+  }, [write]);
+
+  const bufferedWrite = useCallback((data: Uint8Array) => {
+    writeBuffer.current.push(data);
+    if (!rafId.current) {
+      rafId.current = requestAnimationFrame(flushBuffer);
+    }
+  }, [flushBuffer]);
 
   // Create PTY session on mount, destroy on unmount
   useEffect(() => {
@@ -37,12 +56,14 @@ export function TerminalTab({ tabId, active, fontSize }: TerminalTabProps) {
       }
       sessionId = id;
       sessionIdRef.current = id;
-      registerOutputHandler(id, (data) => write(data));
+      registerOutputHandler(id, bufferedWrite);
       requestAnimationFrame(() => focus());
     });
 
     return () => {
       cancelled = true;
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+      writeBuffer.current = [];
       if (sessionId) {
         destroySession(sessionId);
         unregisterOutputHandler(sessionId);

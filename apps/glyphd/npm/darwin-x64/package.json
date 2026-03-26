@@ -1,0 +1,10 @@
+{
+  "name": "@harshilthakkar/glyphd-darwin-x64",
+  "version": "0.1.0",
+  "description": "glyphd binary for macOS x64 (Intel)",
+  "author": "Harshil Thakkar",
+  "license": "MIT",
+  "os": ["darwin"],
+  "cpu": ["x64"],
+  "files": ["bin/", "dist/"]
+}

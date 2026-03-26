@@ -1,0 +1,10 @@
+{
+  "name": "@harshilthakkar/glyphd-linux-x64",
+  "version": "0.1.0",
+  "description": "glyphd binary for Linux x64",
+  "author": "Harshil Thakkar",
+  "license": "MIT",
+  "os": ["linux"],
+  "cpu": ["x64"],
+  "files": ["bin/", "dist/"]
+}

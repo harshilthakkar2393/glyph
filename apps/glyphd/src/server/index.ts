@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { networkInterfaces } from "os";
+import { execSync } from "child_process";
 import path from "path";
 import { websocketHandler } from "./websocket.ts";
 import { setConfig } from "./config.ts";
@@ -13,7 +14,7 @@ import {
   getCookieHeader,
 } from "./auth.ts";
 
-const VERSION = "0.1.1";
+const VERSION = "0.1.2";
 
 // Resolve dist/client path — works both from source and compiled binary
 // Compiled binary: import.meta.dir = "/$bunfs/root/", use process.execPath instead
@@ -30,16 +31,65 @@ interface Config {
   password?: string;
 }
 
+async function handleUpgrade(): Promise<never> {
+  console.log(`  Checking for updates...`);
+  try {
+    const res = await fetch("https://registry.npmjs.org/glyphd/latest");
+    const data = (await res.json()) as { version: string };
+    const latest = data.version;
+
+    if (latest === VERSION) {
+      console.log(`  Already on latest version (${VERSION})`);
+      process.exit(0);
+    }
+
+    console.log(`  Updating glyphd ${VERSION} → ${latest}\n`);
+    execSync("npm i -g glyphd@latest", { stdio: "inherit" });
+    console.log(`\n  Updated to glyphd v${latest}`);
+  } catch {
+    console.error("  Failed to upgrade. Try manually: npm i -g glyphd@latest");
+  }
+  process.exit(0);
+}
+
+function isNewer(latest: string, current: string): boolean {
+  const l = latest.split(".").map(Number);
+  const c = current.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((l[i] ?? 0) > (c[i] ?? 0)) return true;
+    if ((l[i] ?? 0) < (c[i] ?? 0)) return false;
+  }
+  return false;
+}
+
+async function checkForUpdates(): Promise<void> {
+  try {
+    const res = await fetch("https://registry.npmjs.org/glyphd/latest");
+    const data = (await res.json()) as { version: string };
+    const latest = data.version;
+    if (isNewer(latest, VERSION)) {
+      console.log(`  Update available: ${VERSION} → ${latest}`);
+      console.log(`  Run \`glyphd upgrade\` to update\n`);
+    }
+  } catch {
+    // offline or registry down — silently skip
+  }
+}
+
 function parseArgs(): Config {
   const args = process.argv.slice(2);
 
   for (const arg of args) {
+    if (arg === "upgrade") {
+      handleUpgrade();
+    }
     if (arg === "--help" || arg === "-h") {
       console.log(`
 glyphd v${VERSION} — Spawn a shell. Access it from anywhere.
 
 Usage:
   glyphd [options]
+  glyphd upgrade           Update to the latest version
 
 Options:
   --port <port>        Port to listen on (default: 3000, env: PORT)
@@ -235,3 +285,6 @@ if (authConfig.generated) {
   console.log(`\n  Password: ${authConfig.password}`);
 }
 console.log(`\n  Press Ctrl+C to stop.\n`);
+
+// Non-blocking update check
+checkForUpdates();

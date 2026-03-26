@@ -15,7 +15,8 @@ interface Tab {
 }
 
 function makeTab(): Tab {
-  return { id: crypto.randomUUID(), title: "shell" };
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+  return { id, title: "shell" };
 }
 
 export function TerminalWorkspace() {

@@ -13,7 +13,7 @@ import {
   getCookieHeader,
 } from "./auth.ts";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 
 // Resolve dist/client path — works both from source and compiled binary
 // Compiled binary: import.meta.dir = "/$bunfs/root/", use process.execPath instead

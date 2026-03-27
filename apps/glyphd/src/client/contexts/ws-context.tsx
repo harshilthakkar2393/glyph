@@ -130,7 +130,14 @@ export function WsProvider({ children }: { children: ReactNode }) {
 
   const sendInput = useCallback((sessionId: string, data: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "input", sessionId, data }));
+      // Binary frame: [36-byte sessionId][raw input bytes]
+      const encoder = new TextEncoder();
+      const prefix = encoder.encode(sessionId);
+      const payload = encoder.encode(data);
+      const frame = new Uint8Array(36 + payload.length);
+      frame.set(prefix, 0);
+      frame.set(payload, 36);
+      wsRef.current.send(frame);
     }
   }, []);
 

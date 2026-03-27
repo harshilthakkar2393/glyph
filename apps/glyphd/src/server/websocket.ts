@@ -17,8 +17,18 @@ export const websocketHandler = {
   },
 
   message(ws: ServerWebSocket<WsData>, message: string | Buffer) {
-    if (typeof message !== "string") return;
+    // Binary frame = terminal input: [36-byte sessionId][raw data]
+    if (typeof message !== "string") {
+      const bytes = new Uint8Array(message instanceof ArrayBuffer ? message : message.buffer);
+      if (bytes.length > 36) {
+        const sessionId = new TextDecoder().decode(bytes.subarray(0, 36));
+        const data = bytes.subarray(36);
+        writeToSession(sessionId, data);
+      }
+      return;
+    }
 
+    // Text frame = JSON control message
     let msg: { type: string; [key: string]: unknown };
     try {
       msg = JSON.parse(message);
@@ -56,12 +66,6 @@ export const websocketHandler = {
 
         ws.data.sessionIds.add(session.id);
         sendJson(ws, { type: "created", sessionId: session.id });
-        break;
-      }
-
-      case "input": {
-        const { sessionId, data } = msg as { type: string; sessionId: string; data: string };
-        writeToSession(sessionId, data);
         break;
       }
 

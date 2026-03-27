@@ -76,11 +76,11 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
   }
 
   return (
-    <div className="flex h-screen items-center justify-center px-4">
+    <div className="flex h-dvh w-full items-center justify-center">
       <form onSubmit={handleSubmit} className="w-full max-w-sm flex flex-col gap-6">
         <FieldGroup>
           <div className="flex flex-col gap-2 text-center">
-            <h1 className="text-xl font-medium">glyphd</h1>
+            <h1 className="text-xl font-medium">glyph</h1>
             <FieldDescription className="text-center">
               Enter password to continue
             </FieldDescription>
